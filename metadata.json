@@ -1,0 +1,5 @@
+{
+  "name": "Copy of TechnoClinic",
+  "description": "A comprehensive clinic token management system featuring roles for Administrators, Doctors, Assistants, and a public Token Display screen with automated queuing and cabin assignment.",
+  "requestFramePermissions": []
+}
