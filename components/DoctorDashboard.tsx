@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { ClinicState, PatientStatus } from '../types';
 import { Play, CheckCircle, LogOut, User, MapPin, Users } from 'lucide-react';
@@ -36,38 +37,37 @@ const DoctorDashboard: React.FC<Props> = ({ state, onAssignCabin, onNextPatient 
 
   if (!activeCabin) {
     return (
-      <div className="container py-5">
-        <header className="mb-5 text-center">
-          <h2 className="display-6 fw-bold text-dark mb-2">Welcome, {currentDoctor.name}</h2>
-          <p className="text-primary fw-bold text-uppercase tracking-widest small">{currentDoctor.specialization}</p>
+      <div className="p-8 max-w-4xl mx-auto">
+        <header className="mb-10 text-center">
+          <h2 className="text-4xl font-black text-slate-800 tracking-tight">Welcome, {currentDoctor.name}</h2>
+          <p className="text-cyan-600 font-bold uppercase tracking-widest text-xs mt-2">{currentDoctor.specialization}</p>
         </header>
 
-        <div className="card shadow-soft p-4 p-md-5 text-center mx-auto" style={{ maxWidth: '800px' }}>
-          <div className="bg-primary bg-opacity-10 text-primary rounded-4 d-flex align-items-center justify-content-center mx-auto mb-4" style={{ width: '64px', height: '64px' }}>
+        <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl text-center">
+          <div className="w-16 h-16 bg-cyan-100 text-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <MapPin size={32} />
           </div>
-          <h3 className="h4 fw-bold text-dark mb-2">Cabin Assignment</h3>
-          <p className="text-muted mb-5 mx-auto" style={{ maxWidth: '400px' }}>Select an available cabin to start your session.</p>
+          <h3 className="text-2xl font-black text-slate-800 mb-2">Cabin Assignment</h3>
+          <p className="text-slate-500 mb-10 max-w-sm mx-auto">Select an available cabin to start your session.</p>
           
-          <div className="row g-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {state.cabins.map(cabin => {
               const isOccupied = !!cabin.currentDoctorId;
               return (
-                <div key={cabin.id} className="col-6 col-md-3">
-                  <button
-                    disabled={isOccupied}
-                    onClick={() => onAssignCabin(currentDoctor.id, cabin.id)}
-                    className={`card h-100 p-4 d-flex flex-column align-items-center gap-3 border-2 transition-all ${
-                      isOccupied 
-                        ? 'bg-light border-light-subtle opacity-50 cursor-not-allowed' 
-                        : 'bg-white border-light-subtle hover-border-primary hover-bg-primary-subtle text-dark shadow-sm'
-                    }`}
-                  >
-                    <MapPin size={24} className={isOccupied ? 'text-muted' : 'text-primary'} />
-                    <span className="small fw-bold text-uppercase tracking-wider">{cabin.name}</span>
-                    {isOccupied && <span className="fw-bold text-muted text-uppercase" style={{ fontSize: '9px' }}>In Use</span>}
-                  </button>
-                </div>
+                <button
+                  key={cabin.id}
+                  disabled={isOccupied}
+                  onClick={() => onAssignCabin(currentDoctor.id, cabin.id)}
+                  className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-4 ${
+                    isOccupied 
+                      ? 'border-slate-50 bg-slate-50 cursor-not-allowed opacity-40' 
+                      : 'border-slate-100 hover:border-cyan-500 hover:bg-cyan-50 text-slate-700 shadow-sm'
+                  }`}
+                >
+                  <MapPin size={24} className={isOccupied ? 'text-slate-300' : 'text-cyan-600'} />
+                  <span className="font-bold uppercase text-sm tracking-wide">{cabin.name}</span>
+                  {isOccupied && <span className="text-[10px] uppercase font-black text-slate-400">In Use</span>}
+                </button>
               );
             })}
           </div>
@@ -77,95 +77,93 @@ const DoctorDashboard: React.FC<Props> = ({ state, onAssignCabin, onNextPatient 
   }
 
   return (
-    <div className="container py-5">
-      <div className="row g-4">
-        <div className="col-lg-8">
-          <header className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-end gap-3 mb-4">
-            <div>
-              <h2 className="display-6 fw-bold text-dark mb-1">{currentDoctor.name}</h2>
-              <div className="d-flex align-items-center gap-2 text-primary fw-bold text-uppercase tracking-widest small">
-                <MapPin size={14} /> Currently in {activeCabin.name}
-              </div>
-            </div>
-            <button 
-              onClick={() => onAssignCabin(currentDoctor.id, null)}
-              className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 fw-bold text-uppercase tracking-wider rounded-3"
-            >
-              <LogOut size={16} /> Exit Cabin
-            </button>
-          </header>
-
-          <div className="card shadow border-0 rounded-5 overflow-hidden">
-            <div className="card-header bg-primary text-white p-4 p-md-5 border-0">
-              <p className="small fw-bold opacity-75 text-uppercase tracking-widest mb-3">Current Session</p>
-              {currentPatient ? (
-                <div className="d-flex align-items-center justify-content-between">
-                  <div>
-                    <h4 className="display-4 fw-bold tracking-tight mb-2">{currentPatient.name}</h4>
-                    <p className="h4 fw-bold opacity-75">Token #{currentPatient.tokenNumber}</p>
-                  </div>
-                  <div className="bg-white bg-opacity-10 rounded-4 d-flex align-items-center justify-content-center backdrop-blur-sm border border-white border-opacity-25" style={{ width: '96px', height: '96px' }}>
-                    <User size={48} />
-                  </div>
-                </div>
-              ) : (
-                <div className="h4 fw-bold text-white text-opacity-25 fst-italic py-4">Waiting to call next patient...</div>
-              )}
-            </div>
-            
-            <div className="card-body p-4 p-md-5 d-flex flex-column flex-sm-row gap-3">
-              {currentPatient ? (
-                <>
-                  <button 
-                    onClick={handleComplete}
-                    className="btn btn-success flex-grow-1 py-4 px-4 fw-bold text-uppercase tracking-wider shadow-sm d-flex align-items-center justify-content-center gap-3"
-                  >
-                    <CheckCircle size={20} /> Complete
-                  </button>
-                  <button 
-                    onClick={handleNext}
-                    className="btn btn-primary bg-opacity-10 text-primary border-primary border-opacity-25 flex-grow-1 py-4 px-4 fw-bold text-uppercase tracking-wider d-flex align-items-center justify-content-center gap-3"
-                  >
-                    <Play size={20} /> Call Next
-                  </button>
-                </>
-              ) : (
-                <button 
-                  onClick={handleNext}
-                  disabled={waitingQueue.length === 0}
-                  className="btn btn-primary w-100 py-5 rounded-4 fw-bold shadow-lg d-flex align-items-center justify-content-center gap-4 display-6 text-uppercase tracking-widest"
-                >
-                  <Play size={32} /> Start Next
-                </button>
-              )}
+    <div className="p-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 space-y-8">
+        <header className="flex justify-between items-end">
+          <div>
+            <h2 className="text-4xl font-black text-slate-800 tracking-tight">{currentDoctor.name}</h2>
+            <div className="flex items-center gap-2 text-cyan-600 font-bold uppercase tracking-widest text-xs mt-1">
+              <MapPin size={14} /> Currently in {activeCabin.name}
             </div>
           </div>
-        </div>
+          <button 
+            onClick={() => onAssignCabin(currentDoctor.id, null)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-500 border border-slate-200 rounded-xl hover:text-rose-600 hover:border-rose-100 hover:bg-rose-50 transition-all font-bold text-xs uppercase"
+          >
+            <LogOut size={16} /> Exit Cabin
+          </button>
+        </header>
 
-        <div className="col-lg-4">
-          <h3 className="small fw-bold text-muted text-uppercase tracking-widest d-flex align-items-center gap-3 mb-4">
-            Waiting Lounge <span className="badge bg-primary rounded-pill px-3 py-1 fw-bold">{waitingQueue.length}</span>
-          </h3>
-          <div className="d-grid gap-3 custom-scrollbar overflow-auto pe-2" style={{ maxHeight: 'calc(100vh - 180px)' }}>
-            {waitingQueue.length === 0 ? (
-              <div className="card bg-light border-0 p-5 rounded-5 text-center text-muted fw-bold text-uppercase tracking-widest small">
-                Lounge Empty
+        <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl overflow-hidden">
+          <div className="p-10 bg-gradient-to-br from-cyan-600 to-blue-700 text-white">
+            <h3 className="text-xs font-black opacity-80 uppercase tracking-[0.3em] mb-4">Current Session</h3>
+            {currentPatient ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-6xl font-black tracking-tighter mb-2">{currentPatient.name}</h4>
+                  <p className="text-cyan-100 text-xl font-bold">Token #{currentPatient.tokenNumber}</p>
+                </div>
+                <div className="w-24 h-24 bg-white/10 rounded-[32px] flex items-center justify-center backdrop-blur-md border border-white/20 shadow-inner">
+                  <User size={48} />
+                </div>
               </div>
             ) : (
-              waitingQueue.map(p => (
-                <div key={p.id} className="card p-3 border-light-subtle shadow-sm d-flex flex-row align-items-center gap-3 hover-border-primary transition-all rounded-4">
-                  <div className="bg-light rounded-3 d-flex flex-column align-items-center justify-content-center fw-bold text-dark shadow-sm" style={{ width: '56px', height: '56px' }}>
-                    <span className="fw-bold text-muted text-uppercase mb-0" style={{ fontSize: '8px' }}>TKN</span>
-                    <span className="h5 fw-bold mb-0">#{p.tokenNumber}</span>
-                  </div>
-                  <div className="overflow-hidden">
-                    <div className="fw-bold text-dark text-uppercase text-truncate">{p.name}</div>
-                    <div className="small fw-bold text-muted">{p.phone}</div>
-                  </div>
-                </div>
-              ))
+              <div className="text-4xl font-black italic opacity-40 py-4">Waiting to call next...</div>
             )}
           </div>
+          
+          <div className="p-10 flex gap-6 bg-white">
+            {currentPatient ? (
+              <>
+                <button 
+                  onClick={handleComplete}
+                  className="flex-1 bg-emerald-600 text-white py-5 px-8 rounded-2xl font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-100 uppercase tracking-widest text-sm"
+                >
+                  <CheckCircle size={20} /> Complete
+                </button>
+                <button 
+                  onClick={handleNext}
+                  className="flex-1 bg-cyan-50 text-cyan-700 py-5 px-8 rounded-2xl font-black hover:bg-cyan-100 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
+                >
+                  <Play size={20} /> Call Next
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={handleNext}
+                disabled={waitingQueue.length === 0}
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-8 rounded-[32px] font-black hover:from-cyan-700 hover:to-blue-700 disabled:from-slate-200 disabled:to-slate-200 disabled:cursor-not-allowed transition-all shadow-xl shadow-cyan-100 flex items-center justify-center gap-4 text-2xl uppercase tracking-[0.2em]"
+              >
+                <Play size={32} /> Start Next Consultation
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
+          Waiting Lounge <span className="bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full text-[10px] font-black">{waitingQueue.length}</span>
+        </h3>
+        <div className="space-y-4 max-h-[calc(100vh-160px)] overflow-y-auto pr-2 custom-scrollbar">
+          {waitingQueue.length === 0 ? (
+            <div className="p-12 border-2 border-dashed border-slate-100 rounded-[40px] text-center text-slate-300 font-bold uppercase text-xs tracking-widest">
+              Lounge Empty
+            </div>
+          ) : (
+            waitingQueue.map(p => (
+              <div key={p.id} className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-cyan-200 transition-all">
+                <div className="w-14 h-14 bg-slate-50 rounded-2xl flex flex-col items-center justify-center font-black text-slate-800 group-hover:bg-cyan-600 group-hover:text-white transition-all shadow-inner">
+                  <span className="text-[8px] uppercase opacity-60 leading-none mb-0.5 font-black">TKN</span>
+                  <span className="text-xl leading-none">#{p.tokenNumber}</span>
+                </div>
+                <div>
+                  <div className="font-black text-slate-800 uppercase text-sm tracking-tight">{p.name}</div>
+                  <div className="text-[10px] font-bold text-slate-400 mt-0.5">{p.phone}</div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

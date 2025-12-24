@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { ClinicState, PatientStatus } from '../types';
 import { supabase } from '../lib/supabase';
-import { Speaker, Volume2, VolumeX, Monitor, Video, Hash, User, AlertCircle, Clock, Calendar } from 'lucide-react';
+import { Speaker, Volume2, VolumeX, Monitor, Video, Hash, User, AlertCircle } from 'lucide-react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import Logo from './Logo';
 
@@ -53,6 +52,7 @@ const TokenScreen: React.FC<Props> = ({ state }) => {
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch ads from Supabase
   useEffect(() => {
     const fetchAds = async () => {
       const { data } = await supabase
@@ -76,11 +76,14 @@ const TokenScreen: React.FC<Props> = ({ state }) => {
 
   const videoIds = useMemo(() => {
     if (videoUrls.length === 0) return ['9No-FiE9ywg'];
+
     const extractId = (url: string) => {
+      if (!url) return null;
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
       const match = url.match(regExp);
       return (match && match[7].length === 11) ? match[7] : null;
     };
+
     const ids = videoUrls.map(url => extractId(url)).filter(Boolean) as string[];
     return ids.length > 0 ? ids : ['9No-FiE9ywg'];
   }, [videoUrls]);
@@ -93,20 +96,31 @@ const TokenScreen: React.FC<Props> = ({ state }) => {
 
   const announcePatient = async (patientName: string, tokenNumber: number, cabinName: string) => {
     if (!isAudioEnabled) return;
+    
     try {
       setIsAnnouncing(true);
-      if (!audioContextRef.current) audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-      if (audioContextRef.current.state === 'suspended') await audioContextRef.current.resume();
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
 
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Attention please. Token number ${tokenNumber}, ${patientName}, please proceed to ${cabinName}.`;
+      const prompt = `Attention please. Token number ${tokenNumber}, ${patientName}, please proceed to ${cabinName}. Thank you.`;
       
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text: prompt }] }],
         config: {
           responseModalities: [Modality.AUDIO],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' },
+            },
+          },
         },
       });
 
@@ -114,13 +128,21 @@ const TokenScreen: React.FC<Props> = ({ state }) => {
       if (base64Audio) {
         const audioData = decodeBase64(base64Audio);
         const audioBuffer = await decodeAudioData(audioData, audioContextRef.current, 24000, 1);
+        
         const source = audioContextRef.current.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(audioContextRef.current.destination);
-        source.onended = () => setIsAnnouncing(false);
+        source.onended = () => {
+          setIsAnnouncing(false);
+        };
         source.start();
-      } else setIsAnnouncing(false);
-    } catch (e) { setIsAnnouncing(false); }
+      } else {
+        setIsAnnouncing(false);
+      }
+    } catch (error) {
+      console.error("TTS Error:", error);
+      setIsAnnouncing(false);
+    }
   };
 
   useEffect(() => {
@@ -129,78 +151,91 @@ const TokenScreen: React.FC<Props> = ({ state }) => {
       if (!announcedTokens.current.has(topPatient.id)) {
         announcedTokens.current.add(topPatient.id);
         const cabin = state.cabins.find(c => c.id === topPatient.cabinId);
-        announcePatient(topPatient.name, topPatient.tokenNumber, cabin?.name || 'Consultation Room');
+        announcePatient(topPatient.name, topPatient.tokenNumber, cabin?.name || 'Cabin');
       }
     }
   }, [currentPatients, isAudioEnabled]);
 
+  const toggleAudio = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+    setIsAudioEnabled(!isAudioEnabled);
+  };
+
   return (
-    <div className="h-screen bg-[#FDFDFD] text-slate-900 flex flex-col overflow-hidden font-sans select-none">
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar: Queue Status */}
-        <aside className="w-[450px] h-full bg-white border-r border-slate-100 flex flex-col z-20 shadow-[20px_0_50px_rgba(0,0,0,0.02)]">
-          <div className="p-10 border-b border-slate-50 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100">
-                <Logo size={36} className="bg-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none">TechnoClinic</h1>
-                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-2">{state.tenant.name}</p>
-              </div>
+    <div className="h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
+      <div className="flex-1 flex overflow-hidden relative">
+        {!isAudioEnabled && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] bg-white px-6 py-3 rounded-2xl border border-cyan-200 shadow-2xl flex items-center gap-4 animate-bounce">
+            <AlertCircle className="text-cyan-500" size={24} />
+            <div className="text-left">
+              <p className="text-sm font-black text-slate-800 uppercase leading-none mb-1">Audio Muted</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Enable for voice calls</p>
             </div>
-            <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full">
-               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Live</span>
+            <button 
+              onClick={toggleAudio}
+              className="bg-cyan-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase hover:bg-cyan-700 transition-all shadow-lg"
+            >
+              Enable
+            </button>
+          </div>
+        )}
+
+        <aside className="w-[20%] h-full bg-slate-50 border-r border-slate-200 flex flex-col z-10 shadow-sm overflow-hidden text-slate-900">
+          <div className="p-6 border-b border-slate-200 bg-white">
+            <div className="flex items-center gap-3 mb-2">
+              <Logo size={42} className="shadow-cyan-200/50" />
+              <h1 className="text-lg font-black tracking-tight text-slate-800 uppercase leading-none">Techno<br/><span className="text-cyan-600">Clinic</span></h1>
+            </div>
+            <div className="flex items-center justify-between text-cyan-600 font-bold uppercase tracking-[0.2em] text-[8px] mt-4">
+              <span>{state.tenant.name}</span>
+              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             </div>
           </div>
 
-          <div className="flex-1 p-10 space-y-10 overflow-y-auto custom-scrollbar">
-            {/* Active Highlight */}
-            <div className="space-y-4">
-              <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] px-1">Currently Serving</h2>
-              {currentPatients.length > 0 ? (
-                <div className="bg-indigo-600 text-white rounded-[40px] p-8 shadow-2xl shadow-indigo-200 animate-in fade-in slide-in-from-top-2">
-                   <div className="flex items-start justify-between mb-6">
-                      <div>
-                        <p className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest mb-1">Current Call</p>
-                        <h3 className="text-3xl font-extrabold tracking-tight leading-none uppercase">{currentPatients[0].name}</h3>
-                      </div>
-                      <Hash size={32} className="text-white/20" />
-                   </div>
-                   <div className="flex items-end justify-between">
-                      <div className="text-7xl font-black tabular-nums">#{currentPatients[0].tokenNumber}</div>
-                      <div className="text-right">
-                         <p className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest mb-1">Proceed to</p>
-                         <p className="text-xl font-bold uppercase">{state.cabins.find(c => c.id === currentPatients[0].cabinId)?.name || 'Consultation'}</p>
-                      </div>
-                   </div>
-                </div>
-              ) : (
-                <div className="bg-slate-50 border border-slate-100 rounded-[40px] p-12 text-center">
-                   <p className="text-sm font-semibold text-slate-400">Please wait for your token call...</p>
-                </div>
-              )}
+          <div className="flex-1 flex flex-col p-4 space-y-5 overflow-hidden">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 text-center shadow-sm">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tokens</p>
+                 <p className="text-3xl font-black text-emerald-600 tabular-nums leading-none">{state.lastTokenNumber}</p>
+              </div>
+              <div className="bg-cyan-50 p-5 rounded-2xl border border-cyan-100 text-center shadow-sm">
+                 <p className="text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1">Active</p>
+                 <p className="text-3xl font-black text-blue-600 tabular-nums leading-none">
+                   {currentPatients.length > 0 ? currentPatients[0].tokenNumber : '---'}
+                 </p>
+              </div>
             </div>
 
-            {/* Other Cabins List */}
-            <div className="space-y-4">
-               <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] px-1">Cabin Status</h2>
-               <div className="space-y-3">
+            <div className="flex-1 flex flex-col min-h-0">
+               <h2 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-1.5">
+                 <Hash size={12} className="text-cyan-600" /> Active Cabins
+               </h2>
+               <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1">
                   {state.cabins.map(cabin => {
                     const patient = currentPatients.find(p => p.cabinId === cabin.id);
                     return (
-                      <div key={cabin.id} className={`p-6 rounded-3xl border transition-all ${patient ? 'bg-white border-indigo-100 shadow-sm' : 'bg-slate-50/50 border-slate-100 opacity-60'}`}>
+                      <div key={cabin.id} className={`p-4 rounded-2xl border transition-all duration-500 ${patient ? 'bg-white border-cyan-200 shadow-md ring-1 ring-cyan-50' : 'bg-white/50 border-slate-100'}`}>
                         <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{cabin.name}</p>
-                            <p className={`font-bold ${patient ? 'text-slate-900 uppercase' : 'text-slate-300 italic'}`}>
-                              {patient ? patient.name : 'Ready'}
+                          <div className="overflow-hidden">
+                            <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${patient ? 'text-cyan-600' : 'text-slate-400'}`}>
+                              {cabin.name}
                             </p>
+                            {patient ? (
+                              <p className="text-sm font-black text-slate-900 truncate uppercase tracking-tight">
+                                {patient.name}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] font-bold text-slate-300 italic uppercase">Waiting</p>
+                            )}
                           </div>
                           {patient && (
-                            <div className="bg-indigo-50 text-indigo-600 px-4 py-2.5 rounded-2xl font-black text-xl">
-                              #{patient.tokenNumber}
+                            <div className="bg-cyan-600 text-white w-10 h-10 rounded-xl flex flex-col items-center justify-center font-black shrink-0 shadow-lg">
+                               <span className="text-lg leading-none text-white">#{patient.tokenNumber}</span>
                             </div>
                           )}
                         </div>
@@ -211,59 +246,67 @@ const TokenScreen: React.FC<Props> = ({ state }) => {
             </div>
           </div>
 
-          <div className="p-10 border-t border-slate-50 flex items-center justify-between">
-             <div className="flex items-center gap-3 text-slate-400">
-                <Clock size={20} />
-                <span className="text-xl font-bold text-slate-900">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-             </div>
-             <button 
-               onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-               className={`p-3 rounded-2xl transition-all ${isAudioEnabled ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600 animate-pulse'}`}
-             >
-               {isAudioEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
-             </button>
+          <div className="p-4 bg-slate-100 border-t border-slate-200 text-center relative">
+            <div className="text-xl font-black tabular-nums tracking-tighter mb-0.5 text-slate-800">
+              {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+            </div>
+            <div className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.15em]">
+              {time.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+            </div>
+            <button onClick={toggleAudio} className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all ${isAudioEnabled ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}>
+              {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            </button>
           </div>
         </aside>
 
-        {/* Right Area: Broadcast & Alerts */}
-        <main className="flex-1 relative bg-slate-900 overflow-hidden">
+        <main className="relative w-[80%] h-full bg-slate-900 overflow-hidden">
           {isAnnouncing && (
-            <div className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-20 animate-in fade-in duration-300">
-               <div className="mb-10">
-                  <Logo size={120} />
-               </div>
-               <h2 className="text-3xl font-bold text-slate-400 uppercase tracking-[0.5em] mb-4">Now Calling</h2>
-               <div className="text-[20rem] font-black text-indigo-600 leading-none mb-10 tabular-nums">
-                 #{currentPatients[0]?.tokenNumber}
-               </div>
-               <div className="bg-indigo-50 px-16 py-10 rounded-[64px] border border-indigo-100 flex items-center gap-12 max-w-4xl w-full">
-                  <div className="flex-1">
-                    <p className="text-[12px] font-bold text-indigo-400 uppercase tracking-[0.3em] mb-4">Proceed immediately to</p>
-                    <p className="text-6xl font-black text-indigo-900 uppercase tracking-tight">
-                      {state.cabins.find(c => c.id === currentPatients[0]?.cabinId)?.name || 'Consultation'}
+            <div className="absolute inset-0 z-40 bg-white/98 backdrop-blur-3xl flex flex-col items-center justify-center p-10 text-center animate-in fade-in zoom-in-95 duration-500">
+              <Logo size={100} className="mb-8 animate-bounce" />
+              <h2 className="text-3xl font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Attention Required</h2>
+              <div className="text-[12rem] font-black text-cyan-600 leading-none mb-8 tabular-nums tracking-tighter drop-shadow-xl">
+                #{currentPatients[0]?.tokenNumber}
+              </div>
+              <div className="flex items-center gap-12 bg-slate-50 p-12 rounded-[56px] border border-slate-100 shadow-2xl">
+                 <div className="text-left">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Patient</p>
+                    <p className="text-6xl font-black text-slate-900 uppercase tracking-tight">{currentPatients[0]?.name}</p>
+                 </div>
+                 <div className="h-24 w-px bg-slate-200"></div>
+                 <div className="text-left">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Proceed to</p>
+                    <p className="text-6xl font-black text-emerald-600 uppercase tracking-tight">
+                      {state.cabins.find(c => c.id === currentPatients[0]?.cabinId)?.name || 'CABIN'}
                     </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[12px] font-bold text-indigo-400 uppercase tracking-[0.3em] mb-4">Patient Name</p>
-                    <p className="text-4xl font-bold text-indigo-600 uppercase">{currentPatients[0]?.name}</p>
-                  </div>
-               </div>
+                 </div>
+              </div>
             </div>
           )}
 
-          <div className="w-full h-full relative z-0">
-             <div className="absolute inset-0 bg-slate-900 flex items-center justify-center">
-                <iframe
-                  className="w-full h-full pointer-events-none scale-110 opacity-60"
-                  src={youtubeSrc}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                ></iframe>
-             </div>
-             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+          <div className="absolute inset-0 z-0 bg-slate-900">
+            {youtubeSrc ? (
+              <iframe
+                className="w-full h-full pointer-events-none scale-110 opacity-60"
+                src={youtubeSrc}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                title="Global Feed"
+              ></iframe>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center flex-col gap-6 text-white">
+                <Logo size={140} className="opacity-10 grayscale" />
+                <p className="text-white/10 font-black uppercase tracking-[0.5em] text-xl">Display Offline</p>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-slate-900/40"></div>
           </div>
         </main>
       </div>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+      `}</style>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Role } from '../types';
 import { SUPER_ADMIN_CREDS } from '../constants';
@@ -12,9 +13,7 @@ import {
   User,
   CheckCircle,
   ChevronLeft,
-  ShieldAlert,
-  Loader2,
-  Building2
+  ShieldAlert
 } from 'lucide-react';
 
 interface Props {
@@ -25,49 +24,50 @@ interface Props {
 }
 
 const Login: React.FC<Props> = ({ onLogin, clinicName, onBack, isSuperAdminPath }) => {
+  // If isSuperAdminPath is true, we directly show the login form for Super Admin
   const [showStaffLogin, setShowStaffLogin] = useState(isSuperAdminPath ? true : false);
   const [staffRole, setStaffRole] = useState<Role | null>(isSuperAdminPath ? Role.SUPER_ADMIN : null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleStaffLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
-    setTimeout(() => {
-      if (staffRole === Role.SUPER_ADMIN) {
-        if (username === SUPER_ADMIN_CREDS.user && password === SUPER_ADMIN_CREDS.pass) {
-          onLogin(Role.SUPER_ADMIN);
-          return;
-        }
+    if (staffRole === Role.SUPER_ADMIN) {
+      if (username === SUPER_ADMIN_CREDS.user && password === SUPER_ADMIN_CREDS.pass) {
+        onLogin(Role.SUPER_ADMIN);
+        return;
       }
+    }
 
-      const credentials: Record<string, { user: string; pass: string }> = {
-        [Role.ADMIN]: { user: 'admin', pass: 'admin123' },
-        [Role.DOCTOR]: { user: 'doctor', pass: 'doctor123' },
-        [Role.ASSISTANT]: { user: 'assistant', pass: 'asst123' }
-      };
+    const credentials: Record<string, { user: string; pass: string }> = {
+      [Role.ADMIN]: { user: 'admin', pass: 'admin123' },
+      [Role.DOCTOR]: { user: 'doctor', pass: 'doctor123' },
+      [Role.ASSISTANT]: { user: 'assistant', pass: 'asst123' }
+    };
 
-      if (staffRole && staffRole !== Role.SUPER_ADMIN) {
-        const creds = credentials[staffRole];
-        if (username === creds.user && password === creds.pass) {
-          onLogin(staffRole);
-        } else {
-          setError('Invalid credentials for this facility.');
-          setTimeout(() => setError(''), 3000);
-        }
-      } else if (staffRole === Role.SUPER_ADMIN) {
-        setError('Invalid command center master credentials.');
+    if (staffRole && staffRole !== Role.SUPER_ADMIN) {
+      const creds = credentials[staffRole];
+      if (username === creds.user && password === creds.pass) {
+        onLogin(staffRole);
+      } else {
+        setError('Invalid credentials for this facility.');
         setTimeout(() => setError(''), 3000);
       }
-      setIsLoading(false);
-    }, 800);
+    } else if (staffRole === Role.SUPER_ADMIN) {
+      setError('Invalid command center master credentials.');
+      setTimeout(() => setError(''), 3000);
+    }
   };
 
   const resetState = () => {
-    if (!isSuperAdminPath) {
+    if (isSuperAdminPath) {
+      // Just clear fields instead of going back since the directory is removed
+      setUsername('');
+      setPassword('');
+      setError('');
+    } else {
       setShowStaffLogin(false);
       setStaffRole(null);
       setUsername('');
@@ -79,74 +79,99 @@ const Login: React.FC<Props> = ({ onLogin, clinicName, onBack, isSuperAdminPath 
   if (isSuperAdminPath || (showStaffLogin && staffRole)) {
     const isSuperAdmin = staffRole === Role.SUPER_ADMIN;
     return (
-      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center p-3">
-        <div className="card shadow-soft p-4 p-md-5 w-100" style={{ maxWidth: '440px' }}>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-[56px] p-12 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-500">
           {!isSuperAdminPath && (
             <button 
               onClick={resetState}
-              className="btn btn-link p-0 text-muted text-decoration-none mb-4 d-flex align-items-center gap-2 fw-semibold"
+              className="text-slate-400 hover:text-slate-600 mb-10 font-black flex items-center gap-2 transition-all group"
             >
-              <ChevronLeft size={16} /> Back
+              <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> Back to selection
             </button>
           )}
           
-          <div className="text-center mb-4">
-            <div className="d-inline-block mb-3">
-              <div className={`p-3 rounded-4 shadow-sm ${isSuperAdmin ? 'bg-dark text-white' : 'bg-primary text-white'}`}>
-                 {isSuperAdmin ? <ShieldAlert size={28} /> : <Logo size={28} className="bg-white" />}
+          <div className="mb-10">
+            <div className="flex items-center gap-5 mb-3">
+              <div className={`p-4 rounded-2xl ${isSuperAdmin ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/20' : 'bg-cyan-600 text-white shadow-xl shadow-cyan-100'}`}>
+                 {isSuperAdmin ? <ShieldAlert size={36} /> : <Logo size={36} className="bg-white" />}
               </div>
+              <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">
+                {isSuperAdmin ? 'Command Center' : 'Staff Auth'}
+              </h2>
             </div>
-            <h2 className="h4 fw-bold text-dark mb-1">
-              {isSuperAdmin ? 'Command Center' : 'Staff Access'}
-            </h2>
-            <p className="text-muted small fw-medium">
-              {isSuperAdmin ? 'Infrastructure Management' : clinicName}
+            {!isSuperAdmin && <p className="text-[11px] font-black text-cyan-600 uppercase tracking-[0.3em] mb-6">{clinicName}</p>}
+            {isSuperAdmin && <p className="text-[11px] font-black text-cyan-600 uppercase tracking-[0.3em] mb-6">TechnoClinic Infrastructure</p>}
+            <p className="text-slate-500 font-medium text-lg leading-tight">
+              {isSuperAdmin ? 'TechnoClinic Command Center Login' : `Secure authentication required for ${staffRole?.replace('_', ' ')}`}
             </p>
           </div>
 
-          <form onSubmit={handleStaffLogin} className="d-grid gap-3">
-            <div className="form-group">
-              <label className="small fw-bold text-muted text-uppercase tracking-wider mb-1 px-1">Identity</label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0 rounded-start-4 px-3 text-muted">
-                  <User size={18} />
-                </span>
+          <form onSubmit={handleStaffLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] px-1">Login Identity</label>
+              <div className="relative">
+                <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={22} />
                 <input 
-                  autoFocus required type="text" value={username} onChange={(e) => setUsername(e.target.value)}
-                  className="form-control bg-light border-start-0 rounded-end-4"
+                  autoFocus
+                  required
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all font-bold text-slate-700 text-lg"
                   placeholder="Username"
                 />
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="small fw-bold text-muted text-uppercase tracking-wider mb-1 px-1">Passphrase</label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0 rounded-start-4 px-3 text-muted">
-                  <Lock size={18} />
-                </span>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] px-1">Access Passphrase</label>
+              <div className="relative">
+                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={22} />
                 <input 
-                  required type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="form-control bg-light border-start-0 rounded-end-4"
+                  required
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all font-bold text-slate-700 text-lg"
                   placeholder="••••••••"
                 />
               </div>
-              {error && <div className="mt-2 text-danger small fw-semibold text-center py-2 bg-danger bg-opacity-10 rounded-3 border border-danger border-opacity-25">{error}</div>}
+              {error && <p className="mt-4 text-rose-500 text-[10px] font-black uppercase tracking-widest bg-rose-50 p-4 rounded-2xl text-center border border-rose-100">{error}</p>}
             </div>
 
             <button 
-              type="submit" disabled={isLoading}
-              className={`btn ${isSuperAdmin ? 'btn-dark' : 'btn-primary'} py-3 d-flex align-items-center justify-content-center gap-2 shadow-sm rounded-4`}
+              type="submit"
+              className="w-full bg-slate-900 text-white font-black py-6 rounded-3xl hover:bg-slate-800 transition-all shadow-2xl shadow-slate-900/10 flex items-center justify-center gap-4 text-2xl tracking-tighter"
             >
-              {isLoading ? <Loader2 size={20} className="spinner-border spinner-border-sm border-0" /> : 'Sign In'} 
-              {!isLoading && <ArrowRight size={18} />}
+              Verify Identity <ArrowRight size={28} />
             </button>
           </form>
 
-          <div className="mt-5 pt-4 border-top text-center">
-             <div className="small fw-bold text-muted text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2">
-                <ShieldCheck size={12} className="text-success" /> Secure Encryption Active
-             </div>
+          <div className="mt-12 p-8 bg-slate-50 rounded-[32px] border border-slate-100">
+            <p className="text-[10px] text-slate-400 uppercase tracking-[0.3em] font-black mb-4">Debug Access:</p>
+            <div className="space-y-3 font-mono text-[11px] text-slate-600 bg-white/50 p-5 rounded-2xl border border-slate-100">
+              {isSuperAdmin ? (
+                <div className="flex justify-between items-center">
+                  <span className="font-black text-[9px] text-slate-400">COMMAND ROOT</span>
+                  <code className="text-cyan-600 font-bold">{SUPER_ADMIN_CREDS.user} / {SUPER_ADMIN_CREDS.pass}</code>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black text-[9px] text-slate-400">ADMIN</span>
+                    <code className="text-cyan-600 font-bold">admin / admin123</code>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black text-[9px] text-slate-400">DOCTOR</span>
+                    <code className="text-cyan-600 font-bold">doctor / doctor123</code>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black text-[9px] text-slate-400">ASST</span>
+                    <code className="text-cyan-600 font-bold">assistant / asst123</code>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -154,82 +179,93 @@ const Login: React.FC<Props> = ({ onLogin, clinicName, onBack, isSuperAdminPath 
   }
 
   return (
-    <div className="min-vh-100 bg-white d-flex flex-column align-items-center justify-content-center p-3 position-relative overflow-hidden">
-      <div className="position-absolute top-0 end-0 bg-primary bg-opacity-10 blur-5 rounded-circle" style={{ width: '40vw', height: '40vw', filter: 'blur(80px)', zIndex: -1, transform: 'translate(30%, -30%)' }}></div>
-      
-      <div className="container" style={{ maxWidth: '1000px' }}>
-        <div className="row g-5 align-items-center">
-          <div className="col-lg-6">
-            <div className="mb-4">
-              <div className="d-inline-block p-3 bg-primary rounded-4 shadow shadow-primary-subtle mb-4">
-                 <Logo size={48} className="bg-white" />
-              </div>
-              <h1 className="display-4 fw-bold text-dark lh-sm">
-                Welcome to<br/>{clinicName}
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative">
+      <button 
+        onClick={onBack}
+        className="absolute top-10 left-10 flex items-center gap-3 text-slate-400 hover:text-cyan-600 font-black transition-all group"
+      >
+        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
+          <ChevronLeft size={28} /> 
+        </div>
+        Exit Portal
+      </button>
+
+      <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-20">
+        
+        <div className="flex flex-col justify-center space-y-12 p-4">
+          <div className="flex items-center gap-10">
+            <Logo size={120} className="shrink-0 shadow-2xl ring-[12px] ring-white" />
+            <div>
+              <h1 className="text-6xl font-black text-slate-900 tracking-tighter leading-none mb-4">
+                {clinicName}
               </h1>
-              <p className="lead text-muted fw-medium mt-3">
-                Experience modern healthcare management. Choose your access portal to continue.
-              </p>
-            </div>
-            
-            <div className="d-flex flex-wrap gap-2">
-              <div className="badge bg-success-subtle text-success border border-success border-opacity-25 py-2 px-3 rounded-3 d-flex align-items-center gap-2">
-                <CheckCircle size={14} /> HIPAA Compliant
-              </div>
-              <div className="badge bg-primary-subtle text-primary border border-primary border-opacity-25 py-2 px-3 rounded-3 d-flex align-items-center gap-2">
-                <ShieldCheck size={14} /> Network Verified
-              </div>
+              <p className="text-[13px] font-black text-cyan-600 uppercase tracking-[0.6em]">Medical Node Access</p>
             </div>
           </div>
+          <div>
+            <p className="text-3xl text-slate-500 font-medium max-w-lg leading-snug tracking-tight">
+              Welcome to your facility's operational gateway. Select a terminal mode to initialize.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-6">
+             <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                <CheckCircle size={18} className="text-emerald-500" /> End-to-End Secure
+             </div>
+             <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                <CheckCircle size={18} className="text-emerald-500" /> Scalable Node
+             </div>
+          </div>
+        </div>
 
-          <div className="col-lg-6">
-            <div className="card bg-light border-0 p-4 p-md-5 rounded-5 mb-4 shadow-sm">
-               <h3 className="small fw-bold text-muted text-uppercase tracking-wider mb-4 px-2">Patient Services</h3>
-               <div className="row g-3">
-                  <div className="col-sm-6">
-                    <LoginOption 
-                      onClick={() => onLogin(Role.PATIENT)} 
-                      icon={<User size={28} />} 
-                      title="Check-in" 
-                      desc="Front Desk"
-                      theme="primary"
-                    />
+        <div className="space-y-8">
+          <div className="bg-white p-10 rounded-[56px] shadow-2xl shadow-slate-200/50 border border-white">
+             <h3 className="text-[13px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 px-4">Public Interfaces</h3>
+             <div className="space-y-5">
+                <button 
+                  onClick={() => onLogin(Role.PATIENT)}
+                  className="w-full group p-10 bg-cyan-50 hover:bg-cyan-100 rounded-[40px] transition-all text-left flex items-center justify-between border border-cyan-100/50 shadow-sm"
+                >
+                  <div className="flex items-center gap-10">
+                    <div className="w-24 h-24 bg-white text-cyan-600 rounded-[32px] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500">
+                      <User size={48} />
+                    </div>
+                    <div>
+                      <div className="font-black text-4xl text-cyan-950 leading-none mb-3 tracking-tighter">Registration</div>
+                      <div className="text-cyan-800/60 font-black uppercase text-xs tracking-widest">Patient Check-in Unit</div>
+                    </div>
                   </div>
-                  <div className="col-sm-6">
-                    <LoginOption 
-                      onClick={() => onLogin(Role.TOKEN_SCREEN)} 
-                      icon={<Monitor size={28} />} 
-                      title="Monitor" 
-                      desc="Live Queue"
-                      theme="white"
-                    />
+                  <div className="w-14 h-14 bg-cyan-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all -translate-x-8 group-hover:translate-x-0">
+                    <ArrowRight size={28} />
                   </div>
-               </div>
-            </div>
+                </button>
 
-            <div className="card bg-white border border-light-subtle p-4 p-md-5 rounded-5 shadow-sm">
-               <h3 className="small fw-bold text-muted text-uppercase tracking-wider mb-4 px-2">Facility Staff</h3>
-               <div className="row g-2">
-                  <div className="col-4">
-                    <StaffOption icon={<ShieldCheck size={20} />} label="Admin" onClick={() => { setStaffRole(Role.ADMIN); setShowStaffLogin(true); }} />
+                <button 
+                  onClick={() => onLogin(Role.TOKEN_SCREEN)}
+                  className="w-full group p-10 bg-slate-900 hover:bg-slate-800 rounded-[40px] transition-all text-left flex items-center justify-between shadow-2xl shadow-slate-900/20"
+                >
+                  <div className="flex items-center gap-10">
+                    <div className="w-24 h-24 bg-white/10 text-white rounded-[32px] flex items-center justify-center group-hover:bg-cyan-500 transition-colors duration-500">
+                      <Monitor size={48} />
+                    </div>
+                    <div>
+                      <div className="font-black text-4xl text-white leading-none mb-3 tracking-tighter">Live Monitor</div>
+                      <div className="text-white/40 font-black uppercase text-xs tracking-widest">Queue Display Screen</div>
+                    </div>
                   </div>
-                  <div className="col-4">
-                    <StaffOption icon={<UserRound size={20} />} label="Doctor" onClick={() => { setStaffRole(Role.DOCTOR); setShowStaffLogin(true); }} />
+                  <div className="w-14 h-14 bg-white text-slate-900 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all -translate-x-8 group-hover:translate-x-0">
+                    <ArrowRight size={28} />
                   </div>
-                  <div className="col-4">
-                    <StaffOption icon={<ClipboardList size={20} />} label="Assistant" onClick={() => { setStaffRole(Role.ASSISTANT); setShowStaffLogin(true); }} />
-                  </div>
-               </div>
-            </div>
-            
-            <div className="text-center pt-4">
-              <button 
-                onClick={onBack}
-                className="btn btn-link text-muted fw-bold text-decoration-none small text-uppercase tracking-widest d-flex align-items-center gap-2 mx-auto"
-              >
-                <Building2 size={14} /> System Command
-              </button>
-            </div>
+                </button>
+             </div>
+          </div>
+
+          <div className="bg-white p-10 rounded-[56px] shadow-2xl shadow-slate-200/50 border border-white">
+             <h3 className="text-[13px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 px-4">Staff Nodes</h3>
+             <div className="grid grid-cols-3 gap-5">
+                <StaffOption icon={<ShieldCheck size={32} />} label="Admin" onClick={() => { setStaffRole(Role.ADMIN); setShowStaffLogin(true); }} />
+                <StaffOption icon={<UserRound size={32} />} label="Doctor" onClick={() => { setStaffRole(Role.DOCTOR); setShowStaffLogin(true); }} />
+                <StaffOption icon={<ClipboardList size={32} />} label="Asst" onClick={() => { setStaffRole(Role.ASSISTANT); setShowStaffLogin(true); }} />
+             </div>
           </div>
         </div>
       </div>
@@ -237,33 +273,15 @@ const Login: React.FC<Props> = ({ onLogin, clinicName, onBack, isSuperAdminPath 
   );
 };
 
-const LoginOption: React.FC<{ onClick: () => void; icon: React.ReactNode; title: string; desc: string; theme: string }> = ({ onClick, icon, title, desc, theme }) => (
-  <button 
-    onClick={onClick}
-    className={`card h-100 p-4 text-start border shadow-sm rounded-4 transition-all w-100 ${
-      theme === 'primary' ? 'bg-primary text-white border-primary' : 'bg-white text-dark border-light-subtle'
-    }`}
-    style={{ transition: 'transform 0.2s' }}
-  >
-    <div className={`rounded-3 d-flex align-items-center justify-content-center mb-3 ${
-      theme === 'primary' ? 'bg-white bg-opacity-25' : 'bg-light text-primary'
-    }`} style={{ width: '48px', height: '48px' }}>
-      {icon}
-    </div>
-    <div className="fw-bold h5 mb-1">{title}</div>
-    <div className={`small fw-bold text-uppercase tracking-wider opacity-75`}>{desc}</div>
-  </button>
-);
-
 const StaffOption: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
   <button 
     onClick={onClick}
-    className="btn btn-light w-100 p-3 rounded-4 d-flex flex-column align-items-center gap-2 border-0"
+    className="flex flex-col items-center gap-5 p-10 bg-slate-50 hover:bg-cyan-600 hover:text-white rounded-[40px] transition-all duration-500 border border-slate-100 group shadow-sm active:scale-95"
   >
-    <div className="bg-white rounded-3 d-flex align-items-center justify-content-center text-muted shadow-sm" style={{ width: '40px', height: '40px' }}>
+    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-all text-slate-600 group-hover:text-cyan-600 border border-slate-100">
       {icon}
     </div>
-    <span className="fw-bold text-uppercase tracking-wider text-muted" style={{ fontSize: '9px' }}>{label}</span>
+    <span className="font-black text-[11px] tracking-[0.2em] uppercase">{label}</span>
   </button>
 );
 

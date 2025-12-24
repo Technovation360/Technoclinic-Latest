@@ -29,8 +29,7 @@ import {
   ChevronRight,
   LogOut,
   Building2,
-  Globe,
-  Settings
+  Globe
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -40,9 +39,9 @@ const App: React.FC = () => {
   const [isCommandCenterPath, setIsCommandCenterPath] = useState(true);
   
   const currentUrl = useMemo(() => {
-    if (isCommandCenterPath) return "hq.technoclinic.io";
-    if (currentTenant) return `${currentTenant.id}.technoclinic.io`;
-    return "technoclinic.io";
+    if (isCommandCenterPath) return "clinic.technovation360.in/command-center";
+    if (currentTenant) return `clinic.technovation360.in/${currentTenant.id}`;
+    return "clinic.technovation360.in/";
   }, [currentTenant, isCommandCenterPath]);
 
   useEffect(() => {
@@ -63,6 +62,7 @@ const App: React.FC = () => {
 
   const [state, setState] = useState<ClinicState | null>(null);
 
+  // Helper to fetch tokens from Supabase
   const fetchTokens = useCallback(async (clinicId: string) => {
     const { data, error } = await supabase
       .from('tokens')
@@ -71,7 +71,7 @@ const App: React.FC = () => {
       .order('token_number', { ascending: true });
 
     if (error) {
-      console.error('DATABASE ERROR:', error.message || 'Unknown error fetching tokens', error);
+      console.error('Error fetching tokens:', error);
       return [];
     }
 
@@ -87,6 +87,7 @@ const App: React.FC = () => {
     }));
   }, []);
 
+  // Load state when tenant changes and setup Realtime subscription
   useEffect(() => {
     if (!currentTenant || !tenantStorageKey) {
       setState(null);
@@ -142,6 +143,7 @@ const App: React.FC = () => {
 
     initSupabaseSync();
 
+    // Subscribe to real-time updates
     const channel = supabase
       .channel(`tokens_${currentTenant.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens', filter: `clinic_id=eq.${currentTenant.id}` }, async () => {
@@ -159,7 +161,15 @@ const App: React.FC = () => {
     };
   }, [currentTenant, tenantStorageKey, fetchTokens]);
 
-  const addPatient = async (name: string, phone: string): Promise<Patient> => {
+  // Persistent non-database state (cabins)
+  useEffect(() => {
+    if (state && tenantStorageKey) {
+      const { patients, ...otherState } = state; // Don't save patients array locally anymore
+      localStorage.setItem(tenantStorageKey, JSON.stringify(otherState));
+    }
+  }, [state, tenantStorageKey]);
+
+  const addPatient = async (name: string, phone: string) => {
     if (!state || !currentTenant) return {} as Patient;
     
     const newTokenNumber = state.lastTokenNumber + 1;
@@ -176,8 +186,8 @@ const App: React.FC = () => {
       .single();
 
     if (error) {
-      console.error('Error adding patient:', error.message || error);
-      alert('Failed to register patient in database. Please contact support.');
+      console.error('Error adding patient:', error);
+      alert('Failed to register patient in database.');
       return {} as Patient;
     }
 
@@ -204,10 +214,11 @@ const App: React.FC = () => {
       .eq('id', patientId);
 
     if (error) {
-      console.error('Error updating patient status:', error.message || error);
+      console.error('Error updating patient status:', error);
       return;
     }
 
+    // Local UI update for cabins occupancy
     setState(prev => prev ? ({
       ...prev,
       cabins: prev.cabins.map(c => {
@@ -216,6 +227,36 @@ const App: React.FC = () => {
         }
         return c;
       })
+    }) : null);
+  };
+
+  const assignDoctorToCabin = (doctorId: string, cabinId: string | null) => {
+    setState(prev => prev ? ({
+      ...prev,
+      cabins: prev.cabins.map(c => {
+        if (c.currentDoctorId === doctorId) return { ...c, currentDoctorId: undefined };
+        if (c.id === cabinId) return { ...c, currentDoctorId: doctorId };
+        return c;
+      })
+    }) : null);
+  };
+
+  const resetAll = async () => {
+    if (!currentTenant) return;
+    const { error } = await supabase
+      .from('tokens')
+      .delete()
+      .eq('clinic_id', currentTenant.id);
+
+    if (error) {
+      console.error('Error resetting tokens:', error);
+      return;
+    }
+
+    setState(prev => prev ? ({
+      ...prev,
+      patients: [],
+      lastTokenNumber: 0,
     }) : null);
   };
 
@@ -253,14 +294,7 @@ const App: React.FC = () => {
         return (
           <DoctorDashboard 
             state={state} 
-            onAssignCabin={(doctorId, cabinId) => setState(prev => prev ? ({
-              ...prev,
-              cabins: prev.cabins.map(c => {
-                if (c.currentDoctorId === doctorId) return { ...c, currentDoctorId: undefined };
-                if (c.id === cabinId) return { ...c, currentDoctorId: doctorId };
-                return c;
-              })
-            }) : null)}
+            onAssignCabin={assignDoctorToCabin}
             onNextPatient={updatePatientStatus}
           />
         );
@@ -268,15 +302,11 @@ const App: React.FC = () => {
         return (
           <AdminDashboard 
             state={state} 
-            onReset={async () => {
-              if (!currentTenant) return;
-              await supabase.from('tokens').delete().eq('clinic_id', currentTenant.id);
-              setState(prev => prev ? ({...prev, patients: [], lastTokenNumber: 0}) : null);
-            }} 
+            onReset={resetAll} 
             onUpdateCabins={(cabins) => setState(p => p ? ({ ...p, cabins }) : null)} 
             onUpdateDoctors={(doctors) => setState(p => p ? ({ ...p, doctors }) : null)}
             onUpdateAssistants={(assistants) => setState(p => p ? ({ ...p, assistants }) : null)}
-            onUpdateVideos={() => {}}
+            onUpdateVideos={() => {}} // Controlled by Super Admin now
           />
         );
       case Role.ASSISTANT:
@@ -292,7 +322,7 @@ const App: React.FC = () => {
     return (
       <Login 
         onLogin={setCurrentUserRole} 
-        clinicName={isCommandCenterPath ? "Global Command" : (currentTenant?.name || "Clinic")} 
+        clinicName={isCommandCenterPath ? "Command Center" : (currentTenant?.name || "Clinic")} 
         onBack={exitToCommandCenter}
         isSuperAdminPath={isCommandCenterPath}
       />
@@ -301,81 +331,110 @@ const App: React.FC = () => {
 
   if (currentUserRole === Role.TOKEN_SCREEN) {
     return (
-      <div className="vh-100 bg-light position-relative">
+      <div className="relative h-screen">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-cyan-600/20 z-50 flex items-center justify-center">
+            <div className="bg-slate-900/40 text-[8px] font-bold text-white px-2 py-0.5 rounded-b-lg backdrop-blur-sm uppercase tracking-widest">{currentUrl}</div>
+        </div>
         <button 
           onClick={handleLogout}
-          className="position-fixed bottom-0 end-0 m-4 z-3 btn btn-light border shadow-sm opacity-50 hover-opacity-100 rounded-circle p-3"
-          style={{ transition: 'opacity 0.2s' }}
+          className="fixed bottom-4 right-4 z-50 p-3 bg-slate-800/20 hover:bg-slate-800 text-slate-500 hover:text-white rounded-full transition-all border border-slate-700/50 opacity-0 hover:opacity-100"
+          title="Logout Screen"
         >
-          <LogOut size={24} />
+          <LogOut size={20} />
         </button>
         {renderRoleContent()}
       </div>
     );
   }
 
+  if (currentUserRole === Role.SUPER_ADMIN) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-950">
+        <div className="bg-slate-900 px-6 py-2 border-b border-slate-800 flex items-center justify-between text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+            <div className="flex items-center gap-2"><Globe size={12}/> {currentUrl}</div>
+            <div className="flex items-center gap-4">
+                <span>Infrastructure: Operational</span>
+                <span className="text-cyan-500">Master Mode</span>
+            </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {renderRoleContent()}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="d-flex vh-100 bg-light overflow-hidden">
-      {currentUserRole !== Role.PATIENT && currentUserRole !== Role.SUPER_ADMIN && (
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      {currentUserRole !== Role.PATIENT && (
         <aside 
-          className="bg-white border-end d-flex flex-column transition-all" 
-          style={{ width: isCollapsed ? '80px' : '260px', transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
+          className={`${
+            isCollapsed ? 'w-20' : 'w-20 md:w-64'
+          } bg-white border-r border-slate-200 flex flex-col shadow-sm transition-all duration-300 relative`}
         >
-          <div className="p-4 border-bottom d-flex align-items-center gap-3 overflow-hidden" style={{ height: '80px' }}>
-            <Logo size={32} />
-            {!isCollapsed && <span className="fw-bold text-dark fs-5 text-nowrap">TechnoClinic</span>}
+          <div className="p-4 md:p-6 border-b border-slate-100 flex items-center gap-3 h-24">
+            <Logo size={40} className="shrink-0" />
+            {!isCollapsed && (
+              <div className="hidden md:block overflow-hidden">
+                <h1 className="font-black text-lg text-slate-800 tracking-tight whitespace-nowrap leading-none">
+                  {currentTenant?.name}
+                </h1>
+                <p className="text-[10px] text-cyan-600 font-bold uppercase tracking-widest mt-1">TechnoClinic</p>
+              </div>
+            )}
           </div>
           
-          <nav className="flex-grow-1 p-3 overflow-auto">
-            <NavItem 
+          <nav className="flex-1 p-3 flex flex-col gap-2">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">
+              Menu
+            </div>
+            
+            <RoleButton 
               active={true} 
-              icon={<LayoutDashboard size={20} />} 
-              label="Dashboard" 
+              icon={
+                currentUserRole === Role.ADMIN ? <LayoutDashboard size={20} /> :
+                currentUserRole === Role.DOCTOR ? <UserRound size={20} /> :
+                <ClipboardList size={20} />
+              } 
+              label={`${currentUserRole.charAt(0) + currentUserRole.slice(1).toLowerCase()} Portal`} 
               isCollapsed={isCollapsed} 
             />
-            <NavItem 
-              active={false} 
-              icon={<Settings size={20} />} 
-              label="Settings" 
-              isCollapsed={isCollapsed} 
-            />
+
+            <div className="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-2">
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-slate-500 hover:bg-slate-50 font-medium"
+                title={isCollapsed ? 'Sign Out' : ''}
+              >
+                <LogOut size={20} />
+                {!isCollapsed && <span className="hidden md:block">Sign Out</span>}
+              </button>
+              <button 
+                onClick={exitToCommandCenter}
+                className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 font-medium"
+                title={isCollapsed ? 'Switch Facility' : ''}
+              >
+                <Building2 size={20} />
+                {!isCollapsed && <span className="hidden md:block">Command Center</span>}
+              </button>
+            </div>
           </nav>
 
-          <div className="p-3 border-top position-relative">
-            <button 
-              onClick={handleLogout}
-              className="btn btn-outline-danger w-100 d-flex align-items-center gap-3 border-0 py-3 text-start"
-            >
-              <LogOut size={20} />
-              {!isCollapsed && <span>Sign Out</span>}
-            </button>
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="position-absolute top-0 start-100 translate-middle btn btn-white border shadow-sm rounded-circle p-1 d-flex align-items-center justify-content-center"
-              style={{ width: '24px', height: '24px', zIndex: 10 }}
-            >
-              {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-            </button>
-          </div>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute -right-3 top-10 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-cyan-600 shadow-sm z-10 transition-colors hidden md:flex"
+          >
+            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
         </aside>
       )}
 
-      <main className="flex-grow-1 d-flex flex-column overflow-hidden">
-        {currentUserRole !== Role.PATIENT && currentUserRole !== Role.SUPER_ADMIN && (
-          <header className="bg-white border-bottom px-4 d-flex align-items-center justify-content-between" style={{ height: '80px' }}>
-            <div className="d-flex align-items-center gap-3">
-              <div className="p-2 bg-primary bg-opacity-10 rounded">
-                <Globe size={18} className="text-primary" />
-              </div>
-              <div className="small fw-bold text-muted text-uppercase tracking-wider d-none d-sm-block">{currentUrl}</div>
-            </div>
-            <div className="text-end">
-              <div className="small fw-bold text-dark lh-1 mb-1">{currentUserRole}</div>
-              <div className="text-success small fw-bold text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Active Session</div>
-            </div>
-          </header>
-        )}
-        <div className="flex-grow-1 overflow-auto">
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="bg-white border-b border-slate-100 px-6 py-2 flex items-center justify-between text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">
+            <div className="flex items-center gap-2"><Globe size={10} className="text-slate-200" /> {currentUrl}</div>
+            <div>{currentUserRole} SESSION</div>
+        </div>
+        <div className="flex-1 overflow-y-auto">
           {renderRoleContent()}
         </div>
       </main>
@@ -383,13 +442,10 @@ const App: React.FC = () => {
   );
 };
 
-const NavItem: React.FC<{ active: boolean; icon: React.ReactNode; label: string; isCollapsed: boolean }> = ({ active, icon, label, isCollapsed }) => (
-  <div 
-    className={`d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer mb-1 ${active ? 'bg-primary bg-opacity-10 text-primary fw-semibold' : 'text-muted hover-bg-light'}`}
-    style={{ cursor: 'pointer' }}
-  >
-    <span className={active ? 'text-primary' : ''}>{icon}</span>
-    {!isCollapsed && <span className="small text-nowrap">{label}</span>}
+const RoleButton: React.FC<{ active: boolean; icon: React.ReactNode; label: string; isCollapsed: boolean }> = ({ active, icon, label, isCollapsed }) => (
+  <div className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${active ? 'bg-cyan-50 text-cyan-800 font-semibold border border-cyan-100' : 'text-slate-500'}`}>
+    <span className={`${active ? 'text-cyan-600' : ''}`}>{icon}</span>
+    {!isCollapsed && <span className="hidden md:block whitespace-nowrap overflow-hidden">{label}</span>}
   </div>
 );
 

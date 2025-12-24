@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Patient, ClinicState, PatientStatus } from '../types';
 import { User, Phone, CheckCircle2, History, ArrowRight, Calendar, Hash, Clock, AlertCircle } from 'lucide-react';
@@ -15,6 +16,7 @@ const PatientRegistration: React.FC<Props> = ({ onRegister, state }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [registeredPatient, setRegisteredPatient] = useState<Patient | null>(null);
 
+  // Find history based on phone number
   const patientHistory = useMemo(() => {
     if (!phone || phone.length < 3) return [];
     return state.patients
@@ -43,6 +45,7 @@ const PatientRegistration: React.FC<Props> = ({ onRegister, state }) => {
     
     if (val.length === 10) setPhoneError('');
 
+    // Auto-fill logic: if we find a previous record for this exact phone, fill name
     const match = state.patients.find(p => p.phone.replace(/\D/g, '') === val);
     if (match && !name) {
       setName(match.name);
@@ -56,97 +59,91 @@ const PatientRegistration: React.FC<Props> = ({ onRegister, state }) => {
 
   if (registeredPatient) {
     return (
-      <div className="container py-5">
-        <div className="card shadow-soft p-4 p-md-5 mx-auto text-center" style={{ maxWidth: '440px' }}>
-          <div className="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4" style={{ width: '80px', height: '80px' }}>
-            <CheckCircle2 size={48} />
-          </div>
-          <h2 className="h3 fw-bold text-dark mb-2">Registration Done!</h2>
-          <p className="text-muted mb-4">Please wait in the lounge for your call.</p>
-          
-          <div className="card bg-primary text-white border-0 p-4 p-md-5 rounded-5 shadow">
-            <p className="small fw-bold text-uppercase tracking-widest mb-2 opacity-75">Token Number</p>
-            <div className="display-1 fw-bold mb-4">#{registeredPatient.tokenNumber}</div>
-            <hr className="border-white opacity-25 mb-4" />
-            <p className="h4 fw-bold text-truncate">{registeredPatient.name}</p>
-          </div>
-
-          <button 
-            onClick={() => {
-              setRegisteredPatient(null);
-              setName('');
-              setPhone('');
-              setPhoneError('');
-              setShowHistory(false);
-            }}
-            className="btn btn-link mt-4 text-primary fw-bold text-decoration-none text-uppercase tracking-wider small"
-          >
-            Register another patient
-          </button>
+      <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-3xl shadow-xl border border-slate-100 text-center animate-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle2 size={48} />
         </div>
+        <h2 className="text-3xl font-bold text-slate-800 mb-2">Registration Done!</h2>
+        <p className="text-slate-500 mb-8">Please wait in the lounge for your call.</p>
+        
+        <div className="bg-gradient-to-br from-cyan-600 to-blue-700 rounded-3xl p-10 text-white shadow-xl">
+          <p className="text-cyan-100 uppercase tracking-widest text-[10px] font-bold mb-2">Token Number</p>
+          <div className="text-8xl font-black mb-6 drop-shadow-md">{registeredPatient.tokenNumber}</div>
+          <div className="h-px bg-white/20 w-full mb-6"></div>
+          <p className="text-xl font-bold truncate">{registeredPatient.name}</p>
+        </div>
+
+        <button 
+          onClick={() => {
+            setRegisteredPatient(null);
+            setName('');
+            setPhone('');
+            setPhoneError('');
+            setShowHistory(false);
+          }}
+          className="mt-8 text-cyan-600 font-bold hover:underline uppercase text-xs tracking-widest"
+        >
+          Register another patient
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="container py-5" style={{ maxWidth: '480px' }}>
-      <div className="text-center mb-5">
-        <div className="d-flex align-items-center justify-content-center gap-3 mb-4">
-          <Logo size={48} />
-          <h1 className="h2 fw-bold text-dark mb-0">
-            Techno<span className="text-primary">Clinic</span>
+    <div className="max-w-md mx-auto mt-12 p-6 pb-20">
+      <div className="flex flex-col items-center mb-10">
+        <div className="flex items-center gap-4 mb-6">
+          <Logo size={48} className="shrink-0" />
+          <h1 className="text-3xl font-black text-slate-800 tracking-tighter leading-none">
+            Techno<span className="text-cyan-600">Clinic</span>
           </h1>
         </div>
-        <p className="text-muted fw-medium">Enter your details to generate a token</p>
+        <p className="text-slate-500 font-medium text-center">Enter your details to generate a token</p>
       </div>
 
-      <div className="d-grid gap-4">
-        <form onSubmit={handleSubmit} className="card shadow-soft p-4 p-md-5 border-0">
-          <div className="text-center mb-4">
-              <h2 className="h5 fw-bold text-dark text-uppercase tracking-tight">Clinic Check-in</h2>
+      <div className="space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-[40px] shadow-xl border border-slate-100 relative overflow-hidden">
+          <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-slate-700 uppercase tracking-tight">Clinic Check-in</h2>
           </div>
           
-          <div className="d-grid gap-4">
-            <div className="form-group">
-              <label className="small fw-bold text-muted text-uppercase tracking-wider mb-2 px-1">Phone Number</label>
-              <div className="input-group">
-                <span className={`input-group-text bg-light border-end-0 rounded-start-4 px-3 ${phoneError ? 'text-danger' : 'text-muted'}`}>
-                  <Phone size={20} />
-                </span>
+          <div className="space-y-5">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Phone Number</label>
+              <div className="relative">
+                <Phone className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${phoneError ? 'text-rose-400' : 'text-slate-400'}`} size={20} />
                 <input 
                   required
                   type="tel" 
                   maxLength={10}
                   value={phone}
                   onChange={handlePhoneChange}
-                  className={`form-control bg-light border-start-0 rounded-end-4 fw-bold ${phoneError ? 'is-invalid border-danger' : 'border-light-subtle'}`}
+                  className={`w-full pl-12 pr-4 py-4 bg-slate-50 border rounded-2xl focus:ring-2 outline-none transition-all font-bold ${phoneError ? 'border-rose-300 focus:ring-rose-500' : 'border-slate-200 focus:ring-cyan-500'}`}
                   placeholder="10 Digit Number"
                 />
               </div>
               {phoneError && (
-                <div className="invalid-feedback d-flex align-items-center gap-2 mt-2 px-1 fw-bold text-uppercase" style={{ fontSize: '10px' }}>
+                <p className="mt-2 text-[10px] text-rose-500 font-black uppercase tracking-widest flex items-center gap-1.5 px-1 animate-in slide-in-from-top-1">
                   <AlertCircle size={12} /> {phoneError}
-                </div>
+                </p>
               )}
             </div>
 
-            <div className="form-group">
-              <label className="small fw-bold text-muted text-uppercase tracking-wider mb-2 px-1">Full Name</label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0 rounded-start-4 px-3 text-muted">
-                  <User size={20} />
-                </span>
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                 <input 
                   required
                   type="text" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="form-control bg-light border-start-0 rounded-end-4 fw-bold border-light-subtle"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-cyan-500 outline-none transition-all font-bold"
                   placeholder="e.g. John Doe"
                 />
               </div>
               {patientHistory.length > 0 && !name && (
-                <p className="small text-primary fw-bold text-uppercase tracking-wider mt-2 px-1" style={{ fontSize: '10px' }}>
+                <p className="mt-2 text-[10px] text-cyan-600 font-bold uppercase tracking-wider px-1">
                   Found existing patient record
                 </p>
               )}
@@ -155,52 +152,52 @@ const PatientRegistration: React.FC<Props> = ({ onRegister, state }) => {
 
           <button 
             type="submit"
-            className="btn btn-primary w-100 mt-4 py-3 rounded-4 shadow-sm fw-bold text-uppercase tracking-wider"
+            className="w-full mt-8 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black py-5 rounded-2xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-lg shadow-cyan-100 flex items-center justify-center gap-2 text-lg uppercase tracking-wider"
           >
             Generate Token
           </button>
         </form>
 
+        {/* Patient History Section */}
         {patientHistory.length > 0 && (
-          <div className="d-grid gap-2">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <button 
               onClick={() => setShowHistory(!showHistory)}
-              className="btn btn-white w-100 d-flex align-items-center justify-content-between p-3 border rounded-4 shadow-sm"
-              type="button"
+              className="w-full flex items-center justify-between p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:border-cyan-200 transition-all"
             >
-              <div className="d-flex align-items-center gap-3">
-                <div className="bg-primary bg-opacity-10 text-primary rounded-3 d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-cyan-50 text-cyan-600 rounded-xl flex items-center justify-center">
                   <History size={20} />
                 </div>
-                <div className="text-start">
-                  <p className="text-muted fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '10px' }}>Visit History</p>
-                  <p className="small fw-bold text-dark mb-0">{patientHistory.length} Previous Visits</p>
+                <div className="text-left">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Visit History</p>
+                  <p className="text-sm font-bold text-slate-700">{patientHistory.length} Previous Visits</p>
                 </div>
               </div>
-              <ArrowRight size={20} className={`text-muted transition-all ${showHistory ? 'rotate-90' : ''}`} />
+              <ArrowRight size={20} className={`text-slate-300 transition-transform duration-300 ${showHistory ? 'rotate-90' : ''}`} />
             </button>
 
             {showHistory && (
-              <div className="d-grid gap-2 mt-2 custom-scrollbar overflow-auto pe-1" style={{ maxHeight: '240px' }}>
+              <div className="mt-3 space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                 {patientHistory.map((h, i) => (
-                  <div key={h.id} className="card bg-light border-0 p-3 rounded-4 d-flex flex-row align-items-center justify-content-between">
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="bg-white rounded-3 d-flex flex-column align-items-center justify-content-center shadow-sm" style={{ width: '48px', height: '48px' }}>
-                         <span className="text-muted fw-bold text-uppercase mb-0" style={{ fontSize: '8px' }}>TKN</span>
-                         <span className="h6 fw-bold text-dark mb-0">#{h.tokenNumber}</span>
+                  <div key={h.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white rounded-xl flex flex-col items-center justify-center shadow-sm border border-slate-100">
+                         <span className="text-[7px] font-black text-slate-400 uppercase leading-none mb-0.5">TKN</span>
+                         <span className="text-lg font-black text-slate-800 leading-none">#{h.tokenNumber}</span>
                       </div>
                       <div>
-                        <div className="d-flex align-items-center gap-2 mb-1">
-                          <Calendar size={12} className="text-muted" />
-                          <span className="small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>{formatDate(h.registeredAt)}</span>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar size={12} className="text-slate-400" />
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{formatDate(h.registeredAt)}</span>
                         </div>
-                        <div className="d-flex align-items-center gap-2">
-                          <Clock size={12} className="text-muted" />
-                          <span className={`badge border-0 rounded-pill px-2 py-1 text-uppercase ${
-                            h.status === PatientStatus.COMPLETED ? 'bg-success bg-opacity-10 text-success' :
-                            h.status === PatientStatus.CANCELLED ? 'bg-danger bg-opacity-10 text-danger' :
-                            'bg-warning bg-opacity-10 text-warning'
-                          }`} style={{ fontSize: '8px' }}>
+                        <div className="flex items-center gap-2">
+                          <Clock size={12} className="text-slate-400" />
+                          <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border ${
+                            h.status === PatientStatus.COMPLETED ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            h.status === PatientStatus.CANCELLED ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                            'bg-amber-50 text-amber-600 border-amber-100'
+                          }`}>
                             {h.status}
                           </span>
                         </div>
@@ -213,6 +210,19 @@ const PatientRegistration: React.FC<Props> = ({ onRegister, state }) => {
           </div>
         )}
       </div>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
+      `}</style>
     </div>
   );
 };

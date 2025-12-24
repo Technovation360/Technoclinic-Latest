@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { ClinicState, Patient, PatientStatus } from '../types';
-import { Plus, Filter, XCircle, Search } from 'lucide-react';
+import { Plus, Filter, XCircle } from 'lucide-react';
 
 interface Props {
   state: ClinicState;
@@ -24,137 +25,127 @@ const AssistantDashboard: React.FC<Props> = ({ state, onRegister, onUpdateStatus
   const filteredPatients = state.patients.filter(p => filter === 'ALL' || p.status === filter).reverse();
 
   return (
-    <div className="container-fluid py-4 px-md-5">
-      <header className="row align-items-end mb-5 gy-3">
-        <div className="col-md-8">
-          <h2 className="h2 fw-bold text-dark mb-1">Queue Management</h2>
-          <p className="text-muted fw-medium mb-0">Coordinating patient flow for {state.tenant.name}</p>
+    <div className="p-8 max-w-6xl mx-auto space-y-8">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Assistant Panel</h2>
+          <p className="text-slate-500 font-medium">Queue coordination & registration</p>
         </div>
-        <div className="col-md-4 text-md-end">
-          <div className="d-inline-flex align-items-center gap-2 bg-primary bg-opacity-10 text-primary px-4 py-2 rounded-pill fw-bold small">
-            <span className="text-uppercase tracking-wider">Total Hub Load:</span>
-            <span>{state.lastTokenNumber} Tokens</span>
-          </div>
+        <div className="bg-cyan-50 text-cyan-700 px-6 py-2.5 rounded-2xl flex items-center gap-3 font-black border border-cyan-100 shadow-sm uppercase text-xs tracking-widest">
+          Active Tokens: {state.lastTokenNumber}
         </div>
       </header>
 
-      <div className="row g-4">
-        {/* Registration Form */}
-        <div className="col-lg-4">
-          <div className="card h-100 border-0 shadow-sm p-4">
-            <h3 className="h6 fw-bold text-muted text-uppercase tracking-wider mb-4 d-flex align-items-center gap-2">
-              <Plus size={18} className="text-primary" /> New Registration
-            </h3>
-            <form onSubmit={handleManualRegister} className="d-grid gap-3">
-              <div>
-                <label className="small fw-bold text-muted text-uppercase tracking-wider mb-2 d-block">Patient Name</label>
-                <input 
-                  required
-                  type="text" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="form-control"
-                  placeholder="Full Name"
-                />
-              </div>
-              <div>
-                <label className="small fw-bold text-muted text-uppercase tracking-wider mb-2 d-block">Phone Number</label>
-                <input 
-                  required
-                  type="tel" 
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="form-control"
-                  placeholder="Contact Number"
-                />
-              </div>
-              <button 
-                type="submit"
-                className="btn btn-primary btn-lg mt-3 py-3 text-uppercase tracking-widest small fw-bold"
-              >
-                Add to Queue
-              </button>
-            </form>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-xl">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+            <Plus size={16} className="text-cyan-600" /> New Registration
+          </h3>
+          <form onSubmit={handleManualRegister} className="space-y-6">
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block px-1">Patient Name</label>
+              <input 
+                required
+                type="text" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-cyan-500 outline-none transition-all font-bold"
+                placeholder="Full Name"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block px-1">Phone Number</label>
+              <input 
+                required
+                type="tel" 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-cyan-500 outline-none transition-all font-bold"
+                placeholder="Contact No."
+              />
+            </div>
+            <button 
+              type="submit"
+              className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black py-5 rounded-2xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-lg shadow-cyan-100 uppercase tracking-widest text-sm"
+            >
+              Add to Queue
+            </button>
+          </form>
         </div>
 
-        {/* Queue Table */}
-        <div className="col-lg-8">
-          <div className="card border-0 shadow-sm overflow-hidden">
-            <div className="card-header bg-white border-bottom p-4">
-              <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
-                <div className="d-flex align-items-center gap-2">
-                  <Filter size={18} className="text-muted me-1" />
-                  <div className="btn-group btn-group-sm">
-                    {['ALL', PatientStatus.WAITING, PatientStatus.IN_PROGRESS, PatientStatus.COMPLETED].map(opt => (
-                      <button
-                        key={opt}
-                        onClick={() => setFilter(opt as any)}
-                        className={`btn px-3 text-uppercase tracking-widest fw-bold ${filter === opt ? 'btn-primary' : 'btn-light text-muted'}`}
-                      >
-                        {opt === 'ALL' ? 'Total' : opt.replace('_', ' ')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+        <div className="lg:col-span-2 bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-slate-50 flex items-center justify-between gap-4 overflow-x-auto bg-slate-50/30">
+            <div className="flex items-center gap-2 min-w-max">
+              <Filter size={16} className="text-slate-400 mr-2" />
+              {[
+                { label: 'All', val: 'ALL' },
+                { label: 'Waiting', val: PatientStatus.WAITING },
+                { label: 'Consulting', val: PatientStatus.IN_PROGRESS },
+                { label: 'Done', val: PatientStatus.COMPLETED }
+              ].map(opt => (
+                <button
+                  key={opt.val}
+                  onClick={() => setFilter(opt.val as any)}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    filter === opt.val ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-100' : 'text-slate-400 hover:bg-white hover:text-slate-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
-            
-            <div className="table-responsive" style={{ maxHeight: '600px' }}>
-              <table className="table table-hover align-middle mb-0">
-                <thead className="bg-light sticky-top">
-                  <tr className="small text-muted text-uppercase fw-bold tracking-wider">
-                    <th className="px-4 py-3">Token</th>
-                    <th className="px-4 py-3">Patient</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-end">Action</th>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="text-slate-400 text-[9px] uppercase font-black tracking-[0.2em] border-b border-slate-50">
+                  <th className="px-8 py-5">Token</th>
+                  <th className="px-8 py-5">Patient</th>
+                  <th className="px-8 py-5">Status</th>
+                  <th className="px-8 py-5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredPatients.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-20 text-center text-slate-300 font-bold uppercase text-[10px] tracking-[0.3em]">No Patients Found</td>
                   </tr>
-                </thead>
-                <tbody className="border-top-0">
-                  {filteredPatients.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-center py-5">
-                        <p className="text-muted fw-bold text-uppercase small tracking-widest mb-0">No entries in this view</p>
+                ) : (
+                  filteredPatients.map(p => (
+                    <tr key={p.id} className="hover:bg-cyan-50/20 transition-colors group">
+                      <td className="px-8 py-5">
+                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center font-black text-slate-800 group-hover:bg-cyan-100 transition-colors">#{p.tokenNumber}</div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="font-black text-slate-800 uppercase text-sm tracking-tight">{p.name}</div>
+                        <div className="text-[10px] font-bold text-slate-400">{p.phone}</div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                          p.status === PatientStatus.WAITING ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                          p.status === PatientStatus.IN_PROGRESS ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
+                          'bg-emerald-50 text-emerald-700 border-emerald-100'
+                        }`}>
+                          {p.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        {p.status === PatientStatus.WAITING && (
+                          <button 
+                            onClick={() => onUpdateStatus(p.id, PatientStatus.CANCELLED)}
+                            className="p-2 text-slate-300 hover:text-rose-600 rounded-xl transition-all"
+                            title="Cancel Token"
+                          >
+                            <XCircle size={20} />
+                          </button>
+                        )}
                       </td>
                     </tr>
-                  ) : (
-                    filteredPatients.map(p => (
-                      <tr key={p.id}>
-                        <td className="px-4">
-                          <div className="bg-light rounded-3 d-flex align-items-center justify-content-center fw-bold text-dark" style={{ width: '40px', height: '40px' }}>
-                            #{p.tokenNumber}
-                          </div>
-                        </td>
-                        <td className="px-4">
-                          <div className="fw-bold text-dark h6 mb-0">{p.name}</div>
-                          <div className="small text-muted">{p.phone}</div>
-                        </td>
-                        <td className="px-4">
-                          <span className={`badge rounded-pill px-3 py-2 fw-bold text-uppercase tracking-wider ${
-                            p.status === PatientStatus.WAITING ? 'bg-warning text-dark' :
-                            p.status === PatientStatus.IN_PROGRESS ? 'bg-primary' :
-                            'bg-success'
-                          }`} style={{ fontSize: '10px' }}>
-                            {p.status.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="px-4 text-end">
-                          {p.status === PatientStatus.WAITING && (
-                            <button 
-                              onClick={() => onUpdateStatus(p.id, PatientStatus.CANCELLED)}
-                              className="btn btn-outline-danger border-0 p-2 rounded-3"
-                              title="Cancel Token"
-                            >
-                              <XCircle size={20} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
